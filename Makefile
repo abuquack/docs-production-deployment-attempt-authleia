@@ -121,8 +121,8 @@ logs: ## display app-dev logs (follow mode)
 
 run-backend: ## Start only the backend application and all needed services
 	@$(COMPOSE) up --force-recreate -d celery-dev
-	@$(COMPOSE) up --force-recreate -d y-provider
 	@$(COMPOSE) up --force-recreate -d nginx
+	#@$(COMPOSE) up --force-recreate -d y-provider
 .PHONY: run-backend
 
 run: ## start the wsgi (production) and development server

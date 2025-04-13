@@ -1,4 +1,5 @@
 {
+
   "id": "ccf4fd40-4286-474d-854a-4714282a8bec",
   "realm": "impress",
   "notBefore": 0,
@@ -688,13 +689,11 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "ThisIsAnExampleKeyForDevPurposeOnly",
       "redirectUris": [
-        "http://localhost:8070/*",
-        "http://localhost:8071/*",
-        "http://localhost:3200/*",
-        "http://localhost:8088/*",
-        "http://localhost:3000/*"
+	"*"
       ],
       "webOrigins": [
+	"https://docs.abuhussam.uk",
+	"http://docs.abuhussam.uk",
         "http://localhost:3200",
         "http://localhost:8088",
         "http://localhost:8070",
@@ -2278,4 +2277,5 @@
   "clientPolicies": {
     "policies": []
   }
+
 }

@@ -136,16 +136,52 @@ services:
     image: nginx:1.25
     ports:
       - "8083:8083"
+      - "3001:3001"
+      - "80:80"
     volumes:
       - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
+      frontend:
+        condition: service_started
       app-dev:
         condition: service_started
-      y-provider:
-        condition: service_started
+          #y-provider:
+          #  condition: service_started
       keycloak:
         condition: service_healthy
         restart: true
+
+          # WE DONT NEED SWAG, CLOUDFLARE IS HANDLING VARIOUS SSL ASPECTS FOR US!
+          #swag:
+          #  image: lscr.io/linuxserver/swag
+          #  container_name: swag
+          #  cap_add:
+          #    - NET_ADMIN
+          #  environment:
+          #    - PUID=1000
+          #    - PGID=1000
+          #    - TZ=Africa/Cairo
+          #    - URL=abuhussam.uk
+          #    - VALIDATION=http
+          #    - SUBDOMAINS=www,app,api,ws,y,auth
+          #    - EMAIL=your@email.com
+          #  volumes:
+          #    - ./docker/files/swag/config:/config
+          #  ports:
+          #    - 443:443
+          #    - 80:80
+          #  restart: unless-stopped
+          #  depends_on:
+          #    app-dev:
+          #      condition: service_started
+          #    y-provider:
+          #      condition:
+          #        service_started
+          #        #keycloak:
+          #        #  condition: service_healthy
+          #        #  restart: true
+          #    authelia:
+          #      condition: service_healthy
 
   frontend:
     user: "${DOCKER_USER:-1000}"
@@ -154,11 +190,12 @@ services:
       dockerfile: ./src/frontend/Dockerfile
       target: frontend-production
       args:
-        API_ORIGIN: "http://localhost:8071"
+        API_ORIGIN: "https://docs.abuhussam.uk"
         Y_PROVIDER_URL: "ws://localhost:4444"
-        MEDIA_URL: "http://localhost:8083"
+        MEDIA_URL: "https://media.abuhussam.uk"
         SW_DEACTIVATED: "true"
-    image: impress:frontend-development
+          #image: impress:frontend-development
+    image: impress:frontend-production
     ports:
       - "3000:3000"
 
@@ -216,8 +253,10 @@ services:
       - --features=preview
       - --import-realm
       - --proxy=edge
-      - --hostname-url=http://localhost:8083
-      - --hostname-admin-url=http://localhost:8083/
+        #- --hostname-url=http://localhost:8083
+        #- --hostname-admin-url=http://localhost:8083/
+      - --hostname-url=https://auth.abuhussam.uk
+      - --hostname-admin-url=https://auth.abuhussam.uk/
       - --hostname-strict=false
       - --hostname-strict-https=false
       - --health-enabled=true
