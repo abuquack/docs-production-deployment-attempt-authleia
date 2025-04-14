@@ -231,7 +231,6 @@ services:
       - "4444:4444"
     volumes:
       - ./src/frontend/:/app/frontend
-
   kc_postgresql:
     image: postgres:14.3
     healthcheck:
@@ -282,3 +281,35 @@ services:
       kc_postgresql:
         condition: service_healthy
         restart: true
+
+  authelia:
+    container_name: "authelia"
+    image:
+      "docker.io/authelia/authelia:latest"
+      #restart: 'unless-stopped'
+    secrets:
+      [
+        "JWT_SECRET",
+        "SESSION_SECRET",
+        "STORAGE_PASSWORD",
+        "STORAGE_ENCRYPTION_KEY",
+      ]
+    environment:
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: "/run/secrets/JWT_SECRET"
+      AUTHELIA_SESSION_SECRET_FILE:
+        "/run/secrets/SESSION_SECRET"
+        #AUTHELIA_STORAGE_POSTGRES_PASSWORD_FILE: '/run/secrets/STORAGE_PASSWORD'
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: "/run/secrets/STORAGE_ENCRYPTION_KEY"
+    volumes:
+      - "${PWD}/docker/files/authelia/config:/config"
+
+# -------SECRETS--------- #
+secrets:
+  JWT_SECRET:
+    file: "${PWD}/docker/files/authelia/secrets/JWT_SECRET"
+  SESSION_SECRET:
+    file: "${PWD}/docker/files/authelia/secrets/SESSION_SECRET"
+  STORAGE_PASSWORD:
+    file: "${PWD}/docker/files/authelia/secrets/STORAGE_PASSWORD"
+  STORAGE_ENCRYPTION_KEY:
+    file: "${PWD}/docker/files/authelia/secrets/STORAGE_ENCRYPTION_KEY"

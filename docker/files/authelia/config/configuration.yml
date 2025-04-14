@@ -1,0 +1,223 @@
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+server:
+  #address: 'tcp://:8087' # I'm kinda inclined at putting keycloak port here..
+  address: "tcp://:9091"
+
+log:
+  level: "debug"
+
+totp:
+  issuer:
+    "authelia.com"
+
+    #identity_validation:
+    #  reset_password:
+    #    jwt_secret: 'a_very_important_secret'
+
+# duo_api:
+#  hostname: api-123456789.example.com
+#  integration_key: ABCDEF
+#  # This secret can also be set using the env variables AUTHELIA_DUO_API_SECRET_KEY_FILE
+#  secret_key: 1234567890abcdefghifjkl
+
+authentication_backend:
+  file:
+    path: "/config/users_database.yml"
+
+access_control:
+  default_policy: deny
+
+  rules:
+    # Allow public access to OIDC endpoints
+    - domain: auth.abuhussam.uk
+      resources:
+        - "^/api/oidc/.*$"
+      policy: bypass
+
+    # Allow authenticated access to the login portal (needed for OIDC authentication)
+    - domain: auth.abuhussam.uk
+      resources:
+        - "^/$"
+        - "^/api/.*$"
+        - "^/media/.*$"
+      policy: one_factor
+
+    # Optional: Add specific rules for other applications if you're using
+    # Authelia for direct authentication in addition to OIDC
+    # - domain: app.yourdomain.com
+    #   policy: two_factor
+
+session:
+  # This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE
+  #secret: 'insecure_session_secret'
+  #domain: abuhussam.uk   # Not subdomain.example.com
+  #same_site: lax
+  #expiration: 1h
+  #inactivity: 5m
+  #remember_me_duration: 1M
+  cookies:
+    - name: "authelia_session"
+      domain: "abuhussam.uk" # Should match whatever your root protected domain is
+      authelia_url:
+        "https://auth.abuhussam.uk"
+        #expiration: '1 hour'
+      expiration: "5 minutes"
+      inactivity:
+        "3 minutes"
+
+        #redis:
+        #  host: 'redis'
+        #  port: 6379
+        #  # This secret can also be set using the env variables AUTHELIA_SESSION_REDIS_PASSWORD_FILE
+        #  # password: authelia
+
+regulation:
+  max_retries: 3
+  find_time: "2 minutes"
+  ban_time: "5 minutes"
+
+storage:
+  #encryption_key: 'you_must_generate_a_random_string_of_more_than_twenty_chars_and_configure_this'
+  local:
+    path: "/config/db.sqlite3"
+
+notifier:
+  disable_startup_check: true
+  smtp:
+    username: "test"
+    # This secret can also be set using the env variables AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE
+    password: "password"
+    address: "smtp://mail.example.com:25" # We're not gonna even use it, kept as default and disabled
+    sender: "admin@example.com"
+
+identity_providers:
+  oidc:
+    hmac_secret: "this_is_a_secret_abc123abc123abc"
+    jwks:
+      - key_id: "example"
+        algorithm: "RS256"
+        use: "sig"
+        key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDHEmAU00zld1bh
+          kZ2wpwc/uqmYX9DTMFxgWcZP8Ix1j3Uxd2zhoVkrXA7PFOlyFeqv+MjIDlPBs9Z6
+          vkjPqhFshvw2Z+Jm9c3VzYpbyAf0mJQqvqlq5+Q4I+t41DqNyB3upuZQa+r/3vpp
+          S5+rrvB9FPxCoprFSAg3fEsa4USNWVsRukNNDzVbjc3sdM+0Wn0ZEFu/+3nlmg7w
+          3nemKJYbhynoAyjDDrD2k0JAQFwRVER+YKWm0sbv+nTkI08jzunz/atJ5Nt8UXzv
+          aphvWOTXZn7Gm0+4mWBbXUuDR9cvqtIwcPp1/tegusnvbgPJ/ASHRwN2AwONzDbP
+          cvwREvWLAgMBAAECggEALTkXaqO1zEsYCZYy5HaNRwT4kgzyO4e49IpwaqiSwAIe
+          9WXT7k3hG+CF3LU7cxdXgTJbKldW36IjDy87CzHvU2A224UuAYXFhNR0ofUHGaGv
+          xyYZBpg3WCmQzJop0xuq8RQpLgvWDtpwuIrdcvsC1ud1hw25aye59iDeTvTtxc4o
+          Jq96bU6bBUzddkjfAwy9cKgemXazoDjwS2FKcVVbxZ5MPOiDou1DdbOKTYTB2ezZ
+          IWjnsZm7BEq5qgJK9rxPz7Z5xedE9aST8hi2krXRjmeFawm03VAnaYLmUV7wKypy
+          q3MubtES63LyquQZTIWOW0wbzz7LQkoLMSE0zrcMwQKBgQDqRZCXK8Aj/R8j6m+n
+          7rn5VlYLSG2aNIKfiMDk+MDnM7q/UHC3CVJeh1wvH0WEgYiaEOGktLFBG1qqoejN
+          RvuKNqCuDhlRGlGD0pl3BkLR0ECWrQxlh8ka5jcg3ohimy1O8VCR0TEa/FFr/Wok
+          16jummn4WEOnqrCmB+OL2KprxQKBgQDZiQom46n9Wv7HqrKqYxG38No9u0fEnGEF
+          aTBRkO70dbmtHb/Ub0zJyTJlyNHcH7THNTLp7h4BHmU5drVmm6JtbTHoP8QzXDIn
+          xLK3178zSDIVc2Z5RTlJR9oZPMyifTKUVxlcXdS4/OZN41E+0MeMw0ceLe9TEIyL
+          xdV9+k1hDwKBgQCs8BtzrOVS69kgD0DLjCwXRseP3rCiBB9lG3Oh04u7YPF7pyr9
+          w1Dd3TiMxJ3x2hl3+fxINOcgs8uzaIBNgRfRCNCGjHvd5frEwCNvvNx4vC3hzO74
+          yEsJo2aQyhWODRVeUD901SNV02tbt5+ygM0BDlYp8SZIUHXEqtAr/Q6ZLQKBgCIV
+          En4dVVjYlOp7mBqSAwiqt8bMPOZVCe5rGKLu7kFm4Hx7GL8T4RgMadUArcCrRwuf
+          DicQo6rRNFLYgntdDwnN/e/BbeAOJd2NN+MN7mr+eLpbpkaBzgPpOgaSPA2JSA9t
+          xg9utBF3ri2t2+DXnSw0vEPCNqjxAtQzXsuqF82JAoGBALJACR9DAKTw2qtZ/v7o
+          vHHZloIUM2ZiQCLVu57qxV1dxYEir5jHcHG1H5LheGmMCkIBjIfd5HtiD7/06Tki
+          Mw6Vw8jW7AlMnWxWYUbmoYq/g+cYOOBKMc7NVCTgr8KQnjlOurseiKNiWJvvcR3C
+          +H4o5qKkullya61OBrQLKkw2
+          -----END PRIVATE KEY-----
+
+        certificate_chain: |
+          -----BEGIN CERTIFICATE-----
+          MIIDGTCCAgGgAwIBAgIUXWi2BpErS3x6WLhIFS7usrb93n8wDQYJKoZIhvcNAQEL
+          BQAwHDEaMBgGA1UEAwwRYXV0aC5hYnVodXNzYW0udWswHhcNMjUwNDExMTMyNzIw
+          WhcNMjYwNDExMTMyNzIwWjAcMRowGAYDVQQDDBFhdXRoLmFidWh1c3NhbS51azCC
+          ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMcSYBTTTOV3VuGRnbCnBz+6
+          qZhf0NMwXGBZxk/wjHWPdTF3bOGhWStcDs8U6XIV6q/4yMgOU8Gz1nq+SM+qEWyG
+          /DZn4mb1zdXNilvIB/SYlCq+qWrn5Dgj63jUOo3IHe6m5lBr6v/e+mlLn6uu8H0U
+          /EKimsVICDd8SxrhRI1ZWxG6Q00PNVuNzex0z7RafRkQW7/7eeWaDvDed6YolhuH
+          KegDKMMOsPaTQkBAXBFURH5gpabSxu/6dOQjTyPO6fP9q0nk23xRfO9qmG9Y5Ndm
+          fsabT7iZYFtdS4NH1y+q0jBw+nX+16C6ye9uA8n8BIdHA3YDA43MNs9y/BES9YsC
+          AwEAAaNTMFEwHQYDVR0OBBYEFFJYnJsrXmuJzfB2tRBOu2fdN4P+MB8GA1UdIwQY
+          MBaAFFJYnJsrXmuJzfB2tRBOu2fdN4P+MA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI
+          hvcNAQELBQADggEBAEvx5jnRr8ftQ9umpi9rXjMdImDQPMTlm6in/uhpV7t8lT9t
+          FcifeAF5jR/QV1nNYyuNC5INIyNzn/UDZ7mE5IoFEKLaZutK/Vy4k0ja860Tb8wU
+          THXgV6mGQvzpAdN1EL7887IG/SwVERSHO8FdrwJ/O4FZJ5xRUxE0j4olJC1zlIRE
+          Y8mVPCKGdmLgoo7a5puEBLU0Whaciz+E7eU5Vkr3NVGLrVUOoQwandUDcsV3bgty
+          LwHL9BsYImWY9qMBDGUe6b61K71BHxLCxsmdGUHhHsqlfoQyRDvEHumD6mYEuirF
+          7g9Hgqpi9S1Pdz9h4mXO1WE3hyJlxvjbSO+6eLA=
+          -----END CERTIFICATE-----
+
+    enable_client_debug_messages: false
+    minimum_parameter_entropy: 8
+    enforce_pkce: "public_clients_only"
+    enable_pkce_plain_challenge: false
+    enable_jwt_access_token_stateless_introspection: false
+    discovery_signed_response_alg: "none"
+    discovery_signed_response_key_id: ""
+    require_pushed_authorization_requests: false
+    authorization_policies:
+      policy_name:
+        default_policy: "two_factor"
+        rules:
+          - policy: "deny"
+            subject: "group:services"
+            networks:
+              - "192.168.1.0/24"
+              - "192.168.2.51" # TODO: Not sure what this means yet
+    lifespans:
+      access_token: "1h"
+      authorize_code: "1m"
+      id_token: "1h"
+      refresh_token: "90m"
+    claims_policies:
+      policy_name:
+        id_token: []
+        access_token: []
+        id_token_audience_mode:
+          "specification"
+          #custom_claims:
+          #  claim_name:
+          #    attribute: 'attribute_name'
+    scopes:
+      scope_name:
+        claims: []
+    cors:
+      endpoints:
+        - "authorization"
+        - "token"
+        - "revocation"
+        - "introspection"
+      allowed_origins:
+        - "https://docs.abuhussam.uk" # Most important because app is the one I suspect to make requests with origin header
+      allowed_origins_from_client_redirect_uris: false
+    clients:
+      - client_id: "impress"
+        client_name: "Impress Application"
+        client_secret: "ThisIsAnExampleKeyForDevPurposeOnly" # (Consider hashing secrets for production)
+        public: false
+        redirect_uris:
+          - "https://docs.abuhussam.uk/*"
+          - "https://auth.abuhussam.uk/*" # IDK TBH I just left it here
+          - "http://localhost:8070/*"
+          - "http://localhost:8071/*"
+          - "http://localhost:3200/*"
+          - "http://localhost:8088/*"
+          - "http://localhost:3000/*"
+        # Set scopes that align with your Keycloak defaults:
+        scopes:
+          - "openid"
+          - "profile"
+          - "email"
+          - "roles"
+        grant_types:
+          - "authorization_code"
+          - "refresh_token"
+        response_types:
+          - "code"
+        require_pkce: true
+        token_endpoint_auth_method: "client_secret_post"
+        authorization_policy: "policy_name"
