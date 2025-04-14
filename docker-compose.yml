@@ -145,8 +145,8 @@ services:
         condition: service_started
       app-dev:
         condition: service_started
-          #y-provider:
-          #  condition: service_started
+      y-provider:
+        condition: service_started
       keycloak:
         condition: service_healthy
         restart: true
