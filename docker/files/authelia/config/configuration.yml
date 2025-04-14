@@ -7,7 +7,7 @@ server:
   address: "tcp://:9091"
 
 log:
-  level: "debug"
+  level: "trace"
 
 totp:
   issuer:
@@ -41,8 +41,8 @@ access_control:
     - domain: auth.abuhussam.uk
       resources:
         - "^/$"
-        - "^/api/.*$"
         - "^/media/.*$"
+          #- "^/api/.*$"
       policy: one_factor
 
     # Optional: Add specific rules for other applications if you're using
@@ -161,7 +161,7 @@ identity_providers:
     require_pushed_authorization_requests: false
     authorization_policies:
       policy_name:
-        default_policy: "two_factor"
+        default_policy: "one_factor"
         rules:
           - policy: "deny"
             subject: "group:services"
@@ -193,6 +193,7 @@ identity_providers:
         - "introspection"
       allowed_origins:
         - "https://docs.abuhussam.uk" # Most important because app is the one I suspect to make requests with origin header
+        - "http://docs.abuhussam.uk"
       allowed_origins_from_client_redirect_uris: false
     clients:
       - client_id: "impress"
@@ -200,8 +201,9 @@ identity_providers:
         client_secret: "ThisIsAnExampleKeyForDevPurposeOnly" # (Consider hashing secrets for production)
         public: false
         redirect_uris:
-          - "https://docs.abuhussam.uk/*"
-          - "https://auth.abuhussam.uk/*" # IDK TBH I just left it here
+          - "http://docs.abuhussam.uk/*"
+          - "http://docs.abuhussam.uk/api/v1.0/callback/"
+          - "http://auth.abuhussam.uk/*" # IDK TBH I just left it here
           - "http://localhost:8070/*"
           - "http://localhost:8071/*"
           - "http://localhost:3200/*"
