@@ -33,7 +33,9 @@ export const blockNoteSchema = withPageBreak(
   BlockNoteSchema.create({
     blockSpecs: {
       ...defaultBlockSpecs,
+      // @ts-ignore
       divider: DividerBlock,
+      // @ts-ignore
       quote: QuoteBlock,
     },
   }),

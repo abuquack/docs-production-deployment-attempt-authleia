@@ -191,7 +191,7 @@ services:
       target: frontend-production
       args:
         API_ORIGIN: "https://docs.abuhussam.uk"
-        Y_PROVIDER_URL: "ws://localhost:4444"
+        Y_PROVIDER_URL: "ws://docs.abuhussam.uk"
         MEDIA_URL: "https://media.abuhussam.uk"
         SW_DEACTIVATED: "true"
           #image: impress:frontend-development
