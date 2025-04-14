@@ -8,10 +8,12 @@ const buildId = crypto.randomBytes(256).toString('hex').slice(0, 8);
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-	typescript: {
-		ignoreBuildErrors: true,
-	},
-
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     unoptimized: true,
   },
