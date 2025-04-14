@@ -693,7 +693,6 @@
       ],
       "webOrigins": [
 	"https://docs.abuhussam.uk",
-	"http://docs.abuhussam.uk",
         "http://localhost:3200",
         "http://localhost:8088",
         "http://localhost:8070",
