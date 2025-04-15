@@ -29,24 +29,37 @@ STORAGES_STATICFILES_BACKEND=django.contrib.staticfiles.storage.StaticFilesStora
 AWS_S3_ENDPOINT_URL=http://minio:9000
 AWS_S3_ACCESS_KEY_ID=impress
 AWS_S3_SECRET_ACCESS_KEY=password
-MEDIA_BASE_URL=http://localhost:8083
+#MEDIA_BASE_URL=http://localhost:8083
+MEDIA_BASE_URL=https://docs.abuhussam.uk
 
-# OIDC
-OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/certs
-OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/realms/impress/protocol/openid-connect/auth
-OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/token
-OIDC_OP_USER_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/userinfo
+# Old Keycloak OIDC
+# OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/certs
+# #OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/realms/impress/protocol/openid-connect/auth
+# OIDC_OP_AUTHORIZATION_ENDPOINT=https://auth.abuhussam.uk/realms/impress/protocol/openid-connect/auth
+# OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/token
+# OIDC_OP_USER_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/userinfo
+
+# New Authleia OIDC
+OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/jwks.json
+#OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/api/oidc/auth
+OIDC_OP_AUTHORIZATION_ENDPOINT=https://auth.abuhussam.uk/api/oidc/authorization
+OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/api/oidc/token
+OIDC_OP_USER_ENDPOINT=http://nginx:8083/api/oidc/userinfo
 
 OIDC_RP_CLIENT_ID=impress
 OIDC_RP_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
 OIDC_RP_SIGN_ALGO=RS256
 OIDC_RP_SCOPES="openid email"
 
-LOGIN_REDIRECT_URL=http://localhost:3000
-LOGIN_REDIRECT_URL_FAILURE=http://localhost:3000
-LOGOUT_REDIRECT_URL=http://localhost:3000
+# LOGIN_REDIRECT_URL=http://localhost:3000
+# LOGIN_REDIRECT_URL_FAILURE=http://localhost:3000
+# LOGOUT_REDIRECT_URL=http://localhost:3000
 
-OIDC_REDIRECT_ALLOWED_HOSTS=["http://localhost:8083", "http://localhost:3000"]
+LOGIN_REDIRECT_URL=https://docs.abuhussam.uk
+LOGIN_REDIRECT_URL_FAILURE=https://docs.abuhussam.uk
+LOGOUT_REDIRECT_URL=https://docs.abuhussam.uk
+
+OIDC_REDIRECT_ALLOWED_HOSTS=[ "http://localhost:8083", "http://localhost:3000", "https://docs.abuhussam.uk", "https://auth.abuhussam.uk" ]
 OIDC_AUTH_REQUEST_EXTRA_PARAMS={"acr_values": "eidas1"}
 
 # AI
@@ -58,9 +71,10 @@ AI_MODEL=llama
 # Collaboration
 COLLABORATION_API_URL=http://y-provider:4444/collaboration/api/
 COLLABORATION_BACKEND_BASE_URL=http://app-dev:8000
-COLLABORATION_SERVER_ORIGIN=http://localhost:3000
+#COLLABORATION_SERVER_ORIGIN=http://localhost:3000
+COLLABORATION_SERVER_ORIGIN=https://docs.abuhussam.uk
 COLLABORATION_SERVER_SECRET=my-secret
-COLLABORATION_WS_URL=ws://localhost:4444/collaboration/ws/
+COLLABORATION_WS_URL=wss://docs.abuhussam.uk/collaboration/ws/
 
 # Frontend
 FRONTEND_THEME=default
