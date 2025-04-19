@@ -129,7 +129,7 @@ services:
       - "8083:8083"
       - "3001:3001"
         # - "80:80"
-      - "8881:80"
+        # - "8881:80"
     volumes:
       - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
@@ -188,8 +188,8 @@ services:
         SW_DEACTIVATED: "true"
           #image: impress:frontend-development
     image: impress:frontend-production
-    ports:
-      - "3000:3000"
+      #ports:
+      #  - "3000:3000"
 
   crowdin:
     image: crowdin/cli:3.16.0
