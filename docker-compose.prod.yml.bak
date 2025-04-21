@@ -1,0 +1,138 @@
+# Production Docker Compose override: all services, no host volume mounts, secrets via env vars or Docker secrets where needed
+version: '3.8'
+
+services:
+  postgresql:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 2s
+      retries: 300
+
+  redis:
+    image: redis:5
+    restart: unless-stopped
+
+  mailcatcher:
+    image: sj26/mailcatcher:latest
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: minio server --console-address :9001 /data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 20s
+      retries: 300
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+        restart: true
+    entrypoint: >
+      sh -c "
+      /usr/bin/mc alias set impress http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD && \
+      /usr/bin/mc mb impress/impress-media-storage && \
+      /usr/bin/mc version enable impress/impress-media-storage && \
+      exit 0;"
+
+  app:
+    image: impress:backend-production
+    restart: unless-stopped
+    environment:
+      - DJANGO_CONFIGURATION=Demo
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      mailcatcher:
+        condition: service_started
+      createbuckets:
+        condition: service_started
+
+  celery:
+    image: impress:backend-production
+    command: ["celery", "-A", "impress.celery_app", "worker", "-l", "INFO"]
+    restart: unless-stopped
+    environment:
+      - DJANGO_CONFIGURATION=Demo
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+    depends_on:
+      - app
+
+  frontend:
+    image: impress:frontend-production
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+
+  nginx:
+    image: impress:nginx-production
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      frontend:
+        condition: service_started
+      app:
+        condition: service_started
+      y-provider:
+        condition: service_started
+      authelia:
+        condition: service_healthy
+        restart: true
+    environment:
+      - AUTHELIA_PUBLIC_URL=${AUTHELIA_PUBLIC_URL}
+
+  y-provider:
+    image: impress:y-provider-production
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "4444:4444"
+
+  authelia:
+    image: impress:authelia-production
+    restart: unless-stopped
+    environment:
+      - AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=${AUTHELIA_JWT_SECRET}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY=${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+      - AUTHELIA_PUBLIC_URL=${AUTHELIA_PUBLIC_URL}
+
+# No crowdin/node/app-dev/celery-dev in production
+# No volumes or bind mounts: all code/config/assets must be baked into images
