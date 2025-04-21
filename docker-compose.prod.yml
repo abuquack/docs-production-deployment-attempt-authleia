@@ -63,6 +63,9 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
       AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      VIRTUAL_HOST: auth.abuhussam.uk,storage.abuhussam.uk
+      LETSENCRYPT_HOST: auth.abuhussam.uk,storage.abuhussam.uk
+      LETSENCRYPT_EMAIL: admin@abuhussam.uk
     depends_on:
       postgresql:
         condition: service_healthy
@@ -75,6 +78,10 @@ services:
         condition: service_started
       createbuckets:
         condition: service_started
+    expose:
+      - "8000"
+    networks:
+      - default
 
   celery:
     image: impress:backend-production
@@ -99,28 +106,13 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-
-  nginx:
-    image: impress:nginx-production
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      frontend:
-        condition: service_started
-      app:
-        condition: service_started
-      y-provider:
-        condition: service_started
-      authelia:
-        condition: service_healthy
-        restart: true
-    environment:
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
-      DJANGO_CONFIGURATION: ${DJANGO_CONFIGURATION}
-      REDIS_URL: ${REDIS_URL}
-      AUTHELIA_PUBLIC_URL: ${AUTHELIA_PUBLIC_URL}
+      VIRTUAL_HOST: docs.abuhussam.uk
+      LETSENCRYPT_HOST: docs.abuhussam.uk
+      LETSENCRYPT_EMAIL: admin@abuhussam.uk
+    expose:
+      - "3000"
+    networks:
+      - default
 
   y-provider:
     image: impress:y-provider-production
@@ -139,5 +131,45 @@ services:
       AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
       AUTHELIA_PUBLIC_URL: ${AUTHELIA_PUBLIC_URL}
 
-# No crowdin/node/app-dev/celery-dev in production
-# No volumes or bind mounts: all code/config/assets must be baked into images
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs:rw
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    environment:
+      - ENABLE_IPV6=true
+    networks:
+      - default
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-letsencrypt
+    restart: unless-stopped
+    depends_on:
+      - nginx-proxy
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+      - DEFAULT_EMAIL=admin@abuhussam.uk
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs:rw
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    networks:
+      - default
+
+volumes:
+  nginx_certs:
+  nginx_vhost:
+  nginx_html:
+
+networks:
+  default:
+    driver: bridge
