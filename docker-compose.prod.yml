@@ -1,40 +1,37 @@
-# Production Docker Compose override: all services, no host volume mounts, secrets via env vars or Docker secrets where needed
-version: '3.8'
+name: docs
 
 services:
   postgresql:
     image: postgres:16
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 1s
       timeout: 2s
       retries: 300
+    env_file:
+      - env.d/development/postgresql
 
   redis:
     image: redis:5
-    restart: unless-stopped
 
   mailcatcher:
     image: sj26/mailcatcher:latest
-    restart: unless-stopped
 
   minio:
+    user: ${DOCKER_USER:-1000}
     image: minio/minio
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-    command: minio server --console-address :9001 /data
-    restart: unless-stopped
+      - MINIO_ROOT_USER=impress
+      - MINIO_ROOT_PASSWORD=password
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 1s
       timeout: 20s
       retries: 300
+    entrypoint: ""
+    command: minio server --console-address :9001 /data
+    volumes:
+      - ./data/media:/data
 
   createbuckets:
     image: minio/mc
@@ -44,28 +41,24 @@ services:
         restart: true
     entrypoint: >
       sh -c "
-      /usr/bin/mc alias set impress http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD && \
+      /usr/bin/mc alias set impress http://minio:9000 impress password && \
       /usr/bin/mc mb impress/impress-media-storage && \
       /usr/bin/mc version enable impress/impress-media-storage && \
       exit 0;"
 
   app:
+    build:
+      context: .
+      target: backend-production
+      args:
+        DOCKER_USER: ${DOCKER_USER:-1000}
+    user: ${DOCKER_USER:-1000}
     image: impress:backend-production
-    restart: unless-stopped
     environment:
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
-      DJANGO_CONFIGURATION: ${DJANGO_CONFIGURATION}
-      REDIS_URL: ${REDIS_URL}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
-      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
-      VIRTUAL_HOST: auth.abuhussam.uk,storage.abuhussam.uk
-      LETSENCRYPT_HOST: auth.abuhussam.uk,storage.abuhussam.uk
-      LETSENCRYPT_EMAIL: admin@abuhussam.uk
+      - DJANGO_CONFIGURATION=Demo
+    env_file:
+      - env.d/development/common
+      - env.d/development/postgresql
     depends_on:
       postgresql:
         condition: service_healthy
@@ -74,102 +67,146 @@ services:
         condition: service_started
       minio:
         condition: service_started
-      mailcatcher:
-        condition: service_started
-      createbuckets:
-        condition: service_started
-    expose:
-      - "8000"
-    networks:
-      - default
 
   celery:
+    user: ${DOCKER_USER:-1000}
     image: impress:backend-production
     command: ["celery", "-A", "impress.celery_app", "worker", "-l", "INFO"]
-    restart: unless-stopped
     environment:
-      DJANGO_CONFIGURATION: ${DJANGO_CONFIGURATION}
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
-      REDIS_URL: ${REDIS_URL}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
-      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      - DJANGO_CONFIGURATION=Demo
+    env_file:
+      - env.d/development/common
+      - env.d/development/postgresql
     depends_on:
       - app
 
+  nginx:
+    image: nginx:1.25
+    ports:
+      - "8083:8083"
+      - "3001:3001"
+        # - "80:80"
+        # - "8881:80"
+    volumes:
+      - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      app:
+        condition: service_started
+      y-provider:
+        condition: service_started
+      authelia:
+        condition: service_healthy
+        restart: true
+
+          # WE DONT NEED SWAG, CLOUDFLARE IS HANDLING VARIOUS SSL ASPECTS FOR US!
+          #swag:
+          #  image: lscr.io/linuxserver/swag
+          #  container_name: swag
+          #  cap_add:
+          #    - NET_ADMIN
+          #  environment:
+          #    - PUID=1000
+          #    - PGID=1000
+          #    - TZ=Africa/Cairo
+          #    - URL=abuhussam.uk
+          #    - VALIDATION=http
+          #    - SUBDOMAINS=www,app,api,ws,y,auth
+          #    - EMAIL=your@email.com
+          #  volumes:
+          #    - ./docker/files/swag/config:/config
+          #  ports:
+          #    - 443:443
+          #    - 80:80
+          #  restart: unless-stopped
+          #  depends_on:
+          #    app-dev:
+          #      condition: service_started
+          #    y-provider:
+          #      condition:
+          #        service_started
+          #        #keycloak:
+          #        #  condition: service_healthy
+          #        #  restart: true
+          #    authelia:
+          #      condition: service_healthy
+
   frontend:
+    user: "${DOCKER_USER:-1000}"
+    build: 
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      target: frontend-production
+      args:
+        API_ORIGIN: "https://docs.abuhussam.uk"
+        Y_PROVIDER_URL: "ws://docs.abuhussam.uk"
+        MEDIA_URL: "https://media.abuhussam.uk"
+        SW_DEACTIVATED: "true"
+          #image: impress:frontend-development
     image: impress:frontend-production
-    restart: unless-stopped
+      #ports:
+      #  - "3000:3000"
+
+  crowdin:
+    image: crowdin/cli:3.16.0
+    volumes:
+      - ".:/app"
+    env_file:
+      - env.d/development/crowdin
+    user: "${DOCKER_USER:-1000}"
+    working_dir: /app
+
+  node:
+    image: node:18
+    user: "${DOCKER_USER:-1000}"
     environment:
-      NODE_ENV: production
-      VIRTUAL_HOST: docs.abuhussam.uk
-      LETSENCRYPT_HOST: docs.abuhussam.uk
-      LETSENCRYPT_EMAIL: admin@abuhussam.uk
-    expose:
-      - "3000"
-    networks:
-      - default
+      HOME: /tmp 
+    volumes:
+      - ".:/app"
 
   y-provider:
-    image: impress:y-provider-production
+    user: ${DOCKER_USER:-1000}
+    build: 
+      context: .
+      dockerfile: ./src/frontend/servers/y-provider/Dockerfile
+      target: y-provider
+    command: ["yarn", "workspace", "server-y-provider", "run", "start"]
+    working_dir: /app/frontend
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
+    env_file:
+      - env.d/development/common
     ports:
       - "4444:4444"
 
   authelia:
-    image: impress:authelia-production
-    restart: unless-stopped
+    container_name: "authelia"
+    image:
+      "docker.io/authelia/authelia:latest"
+      #restart: 'unless-stopped'
+    secrets:
+      [
+        "JWT_SECRET",
+        "SESSION_SECRET",
+        "STORAGE_PASSWORD",
+        "STORAGE_ENCRYPTION_KEY",
+      ]
     environment:
-      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET: ${AUTHELIA_JWT_SECRET}
-      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
-      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
-      AUTHELIA_PUBLIC_URL: ${AUTHELIA_PUBLIC_URL}
-
-  nginx-proxy:
-    image: jwilder/nginx-proxy:alpine
-    container_name: nginx-proxy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: "/run/secrets/JWT_SECRET"
+      AUTHELIA_SESSION_SECRET_FILE:
+        "/run/secrets/SESSION_SECRET"
+        #AUTHELIA_STORAGE_POSTGRES_PASSWORD_FILE: '/run/secrets/STORAGE_PASSWORD'
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: "/run/secrets/STORAGE_ENCRYPTION_KEY"
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - nginx_certs:/etc/nginx/certs:rw
-      - nginx_vhost:/etc/nginx/vhost.d
-      - nginx_html:/usr/share/nginx/html
-    environment:
-      - ENABLE_IPV6=true
-    networks:
-      - default
+      - "${PWD}/docker/files/authelia/config:/config"
 
-  letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    container_name: nginx-letsencrypt
-    restart: unless-stopped
-    depends_on:
-      - nginx-proxy
-    environment:
-      - NGINX_PROXY_CONTAINER=nginx-proxy
-      - DEFAULT_EMAIL=admin@abuhussam.uk
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - nginx_certs:/etc/nginx/certs:rw
-      - nginx_vhost:/etc/nginx/vhost.d
-      - nginx_html:/usr/share/nginx/html
-    networks:
-      - default
-
-volumes:
-  nginx_certs:
-  nginx_vhost:
-  nginx_html:
-
-networks:
-  default:
-    driver: bridge
+# -------SECRETS--------- #
+secrets:
+  JWT_SECRET:
+    file: "${PWD}/docker/files/authelia/secrets/JWT_SECRET"
+  SESSION_SECRET:
+    file: "${PWD}/docker/files/authelia/secrets/SESSION_SECRET"
+  STORAGE_PASSWORD:
+    file: "${PWD}/docker/files/authelia/secrets/STORAGE_PASSWORD"
+  STORAGE_ENCRYPTION_KEY:
+    file: "${PWD}/docker/files/authelia/secrets/STORAGE_ENCRYPTION_KEY"

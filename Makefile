@@ -131,6 +131,10 @@ run:
 	@$(COMPOSE) up --force-recreate -d frontend
 .PHONY: run
 
+run-prod: ## start the production server using docker-compose.prod.yml
+	@DOCKER_USER=$(DOCKER_USER) docker compose -f docker-compose.prod.yml up -d
+.PHONY: run-prod
+
 status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
 .PHONY: status
