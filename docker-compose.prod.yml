@@ -171,8 +171,8 @@ services:
       context: .
       dockerfile: ./src/frontend/servers/y-provider/Dockerfile
       target: y-provider
-    command: ["yarn", "workspace", "server-y-provider", "run", "start"]
-    working_dir: /app/frontend
+    command: ["yarn", "start"]
+    working_dir: /home/frontend/servers/y-provider
     restart: unless-stopped
     env_file:
       - env.d/development/common

@@ -80,7 +80,7 @@ regulation:
   ban_time: "5 minutes"
 
 storage:
-  encryption_key: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+  # encryption_key: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
   local:
     path: "/config/db.sqlite3"
 
