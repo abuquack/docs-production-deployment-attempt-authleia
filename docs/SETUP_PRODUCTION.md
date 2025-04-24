@@ -31,7 +31,15 @@ This will:
 - Build all necessary Docker images
 - Start all services defined in `docker-compose.prod.yml`
 
-## 4. Wait for Services to Start
+## 4. Run Database Migrations
+
+After the stack is up, run Django migrations to initialize the database schema:
+
+```
+docker compose -f docker-compose.prod.yml exec app python manage.py migrate
+```
+
+## 5. Wait for Services to Start
 
 Some services may take a few seconds to become healthy. You can check their status with:
 
@@ -39,17 +47,17 @@ Some services may take a few seconds to become healthy. You can check their stat
 docker compose -f docker-compose.prod.yml ps
 ```
 
-## 5. Access the Services
+## 6. Access the Services
 
 - **Frontend:** http://localhost:8080 (or your configured domain)
 - **y-provider (collaboration server):** ws://localhost:4444
 - **API/Backend:** (see nginx config for routes)
 
-## 6. Custom Domains
+## 7. Custom Domains
 
 To use custom domains, update the nginx config in `docker/files/etc/nginx/conf.d/` and point your DNS records to your server's IP.
 
-## 7. Cleaning Up
+## 8. Cleaning Up
 
 To remove all containers, networks, and volumes:
 

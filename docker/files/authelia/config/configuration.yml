@@ -208,6 +208,7 @@ identity_providers:
       allowed_origins_from_client_redirect_uris: false
     clients:
       - client_id: "impress"
+        consent_mode: auto
         client_name: "Impress Application"
         client_secret: "ThisIsAnExampleKeyForDevPurposeOnly" # (Consider hashing secrets for production)
         public: false
@@ -215,6 +216,9 @@ identity_providers:
           - "http://docs.abuhussam.uk/*"
           - "http://docs.abuhussam.uk/api/v1.0/callback/"
           - "http://auth.abuhussam.uk/*" # IDK TBH I just left it here
+          - "https://docs.abuhussam.uk/*"
+          - "https://docs.abuhussam.uk/api/v1.0/callback/"
+          - "https://auth.abuhussam.uk/*" # IDK TBH I just left it here
           - "http://localhost:8070/*"
           - "http://localhost:8071/*"
           - "http://localhost:3200/*"
