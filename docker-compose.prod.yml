@@ -47,7 +47,7 @@ services:
       /usr/bin/mc version enable impress/impress-media-storage && \
       exit 0;"
 
-  app-dev:
+  app:
     build:
       context: .
       target: backend-development
