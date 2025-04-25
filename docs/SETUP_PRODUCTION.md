@@ -15,6 +15,7 @@ The project uses several environment files for configuration. Restore them from 
 
 ```
 make create-env-files
+docker compose -f docker-compose.prod.yml build
 ```
 
 This will copy the required files into `env.d/development/`.
@@ -25,6 +26,8 @@ Use the provided Makefile rule to build and start all production services:
 
 ```
 make run-prod
+if you face an error run this
+sudo chown -R 1000:1000 ./data/media && sudo chmod -R u+rwX ./data/media
 ```
 
 This will:
@@ -44,6 +47,8 @@ docker compose -f docker-compose.prod.yml exec app python manage.py migrate
 Some services may take a few seconds to become healthy. You can check their status with:
 
 ```
+sudo ufw allow 8083
+sudo ufw allow 3001
 docker compose -f docker-compose.prod.yml ps
 ```
 
